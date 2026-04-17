@@ -64,7 +64,7 @@ Route::delete('/supprimerReservation/{id}', [reservationController::class, 'supp
 // Routes pour les SALLES
 Route::get('/listeSalle', [salleController::class, 'listeSalle'])->name('salle.liste');
 Route::get('/listeSalleClient', [salleController::class, 'listeSalleClient'])->name('salle.listeClient');
-Route::get('/listeSalleSecretaire', [salleController::class, 'listeSalleSecretaire'])->name('salle.liste');
+Route::get('/listeSalleSecretaire', [salleController::class, 'listeSalleSecretaire'])->name('salle.listeSecretaire');
 Route::get('/ajouterSalle', [salleController::class, 'ajouterSalle'])->name('salleAjouter');
 Route::post('/ajouterSalle', [salleController::class, 'handleSalleAjouter'])->name('handleSalleAjouter');
 Route::get('/modifierSalle/{id}', [salleController::class, 'modifierSalle'])->name('salle.modifier');
