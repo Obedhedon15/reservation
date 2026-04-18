@@ -1,6 +1,6 @@
 FROM php:8.2-fpm
 
-# Installation des dépendances système
+# 1. Installation des dépendances système
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Installation des extensions PHP
+# 2. Installation des extensions PHP
 RUN docker-php-ext-install \
     pdo \
     pdo_mysql \
@@ -27,72 +27,56 @@ RUN docker-php-ext-install \
     zip \
     opcache
 
-# Installation de Redis
-RUN pecl install redis \
-    && docker-php-ext-enable redis
+# 3. Installation de Redis
+RUN pecl install redis && docker-php-ext-enable redis
 
-# Installation de Composer
+# 4. Installation de Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Installation de Node.js 20.x
+# 5. Installation de Node.js 20.x
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Dossier de travail
+# 6. Dossier de travail
 WORKDIR /app
 
-# Copie des fichiers de dépendances (optimisation du cache Docker)
+# 7. Dépendances (Cache Optimisé)
 COPY composer.json composer.lock ./
-RUN composer install \
-    --optimize-autoloader \
-    --no-scripts \
-    --no-interaction \
-    --no-dev
+RUN composer install --optimize-autoloader --no-scripts --no-interaction --no-dev
 
 COPY package.json package-lock.json* ./
 RUN npm install --ignore-scripts
 
-# Copie du reste de l'application
+# 8. Copie du projet et Build
 COPY . .
-
-# Build des assets (Vite)
 RUN npm run build
-
-# Finalisation de Composer
 RUN composer dump-autoload --optimize --no-scripts
 
-# Permissions CRUCIALES : On met 775 et on donne à www-data
-RUN mkdir -p \
-    storage/framework/sessions \
-    storage/framework/views \
-    storage/framework/cache \
-    storage/framework/testing \
-    storage/logs \
-    bootstrap/cache \
+# 9. Permissions
+RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data /app
 
-# Nettoyage des caches Laravel pour forcer la lecture des variables Railway
-RUN php artisan config:clear \
-    && php artisan route:clear \
-    && php artisan view:clear \
-    && php artisan event:clear
+# 10. Nettoyage Laravel
+RUN php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan event:clear
 
-# Configuration de PHP-FPM (Socket Unix)
+# 11. Configuration PHP-FPM (Socket Unix)
 RUN sed -i 's|listen = 127.0.0.1:9000|listen = /run/php/php8.2-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's|;listen.owner = www-data|listen.owner = www-data|' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's|;listen.group = www-data|listen.group = www-data|' /usr/local/etc/php-fpm.d/www.conf \
     && mkdir -p /run/php
 
+# 12. Configuration NGINX (Correction doublon)
 RUN rm -rf /etc/nginx/sites-enabled/* && \
     echo "" > /etc/nginx/sites-available/default && \
     ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
-
-# On installe ta configuration Bopeto
 COPY docker/nginx.conf /etc/nginx/sites-enabled/app.conf
-# ------------------------------------------
+
+# 13. Configuration SUPERVISOR (La ligne qui manquait !)
+RUN mkdir -p /etc/supervisor/conf.d
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 80
 
