@@ -59,21 +59,22 @@ class PaiementController extends Controller
             'date'      => $request->date,
         ]);
 
-       // Préparer les données à envoyer à CinetPay
-    $dataToSend = [
-        'apikey'                 => env('CINETPAY_API_KEY'),
-        'site_id'                => env('CINETPAY_SITE_ID'),
-        'transaction_id'         => $reference,
-        'amount'                 => (int) $salle->tarif,
-        'currency'               => 'CDF',
-        'description' => 'Réservation de la salle : ' . ($salle->nom ?? $salle->salle ?? 'Inconnue'),
-        'return_url'             => env('CINETPAY_RETURN_URL'),
-        'notify_url'             => env('CINETPAY_NOTIFY_URL'),
-        'customer_name'          => trim($request->name),
-        'customer_email'         => $request->email,
-        'customer_phone_number'  => preg_replace('/\s+/', '', $request->phone),
-        'customer_country'       => 'CD',
-    ];
+      // Préparer les données à envoyer à CinetPay
+$dataToSend = [
+    // Utilisation de config() ou env() avec une sécurité
+    'apikey'           => config('services.cinetpay.api_key') ?? env('CINETPAY_API_KEY'),
+    'site_id'          => config('services.cinetpay.site_id') ?? env('CINETPAY_SITE_ID'),
+    'transaction_id'   => $reference,
+    'amount'           => (int) $salle->tarif,
+    'currency'         => 'CDF',
+    'description'      => 'Réservation de la salle : ' . ($salle->nom ?? 'Inconnue'),
+    'return_url'       => env('CINETPAY_RETURN_URL'),
+    'notify_url'       => env('CINETPAY_NOTIFY_URL'),
+    'customer_name'    => trim($request->name),
+    'customer_email'   => $request->email,
+    'customer_phone_number' => preg_replace('/\s+/', '', $request->phone),
+    'customer_country' => 'CD',
+];
 
     // Afficher les données pour debug et stopper ici
     //dd($dataToSend);
@@ -83,7 +84,7 @@ class PaiementController extends Controller
 
     $data = $response->json();
 
-    dd($data);
+    
 
     if (isset($data['code']) && $data['code'] == '201') {
         return redirect()->away($data['data']['payment_url']);
