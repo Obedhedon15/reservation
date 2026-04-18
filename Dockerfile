@@ -94,7 +94,14 @@ RUN sed -i 's|listen = 127.0.0.1:9000|listen = /run/php/php8.2-fpm.sock|' /usr/l
 
 # Nginx configuration
 RUN rm -f /etc/nginx/sites-enabled/default
+
+# AJOUTE CETTE LIGNE ICI POUR CASSER LE CACHE :
+RUN echo "Update Bopeto Services $(date)" > /var/www/html/index.html
+
 COPY docker/nginx.conf /etc/nginx/sites-enabled/app.conf
+
+
+
 
 # Supervisor configuration
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
