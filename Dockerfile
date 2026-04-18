@@ -1,6 +1,6 @@
 FROM php:8.2-fpm
 
-# Install system dependencies
+# Installation des dépendances système
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
+# Installation des extensions PHP
 RUN docker-php-ext-install \
     pdo \
     pdo_mysql \
@@ -27,48 +27,43 @@ RUN docker-php-ext-install \
     zip \
     opcache
 
-# Install Redis extension via PECL
+# Installation de Redis
 RUN pecl install redis \
     && docker-php-ext-enable redis
 
-# Install Composer
+# Installation de Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install Node.js 20.x
+# Installation de Node.js 20.x
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Dossier de travail
 WORKDIR /app
 
-# Copy composer files first for layer caching
+# Copie des fichiers de dépendances (optimisation du cache Docker)
 COPY composer.json composer.lock ./
-
-# Install PHP dependencies (no scripts to avoid artisan calls without .env)
 RUN composer install \
     --optimize-autoloader \
     --no-scripts \
     --no-interaction \
     --no-dev
 
-# Copy package files for layer caching
 COPY package.json package-lock.json* ./
-
-# Install Node dependencies and build assets
 RUN npm install --ignore-scripts
-COPY vite.config.js ./
-COPY resources/ ./resources/
-RUN npm run build
 
-# Copy the rest of the application
+# Copie du reste de l'application
 COPY . .
 
-# Re-run composer to trigger post-autoload-dump scripts now that full app is present
+# Build des assets (Vite)
+RUN npm run build
+
+# Finalisation de Composer
 RUN composer dump-autoload --optimize --no-scripts
 
-# Create required storage directories and set permissions
+# Permissions CRUCIALES : On met 775 et on donne à www-data
 RUN mkdir -p \
     storage/framework/sessions \
     storage/framework/views \
@@ -77,38 +72,27 @@ RUN mkdir -p \
     storage/logs \
     bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache
+    && chown -R www-data:www-data /app
 
-# Nettoyage complet : on ne met RIEN en cache pendant le build pour éviter les crashs
+# Nettoyage des caches Laravel pour forcer la lecture des variables Railway
 RUN php artisan config:clear \
     && php artisan route:clear \
     && php artisan view:clear \
     && php artisan event:clear
 
-
-# Configure PHP-FPM to listen on a Unix socket
+# Configuration de PHP-FPM (Socket Unix)
 RUN sed -i 's|listen = 127.0.0.1:9000|listen = /run/php/php8.2-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's|;listen.owner = www-data|listen.owner = www-data|' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's|;listen.group = www-data|listen.group = www-data|' /usr/local/etc/php-fpm.d/www.conf \
     && mkdir -p /run/php
 
-# Nginx configuration
+# Configuration Nginx
 RUN rm -f /etc/nginx/sites-enabled/default
-
-# AJOUTE CETTE LIGNE ICI POUR CASSER LE CACHE :
-RUN echo "Update Bopeto Services $(date)" > /var/www/html/index.html
-
 COPY docker/nginx.conf /etc/nginx/sites-enabled/app.conf
 
-
-
-
-# Supervisor configuration
+# Configuration Supervisor
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Force la génération de la clé et les migrations si nécessaire
-RUN php artisan key:generate --force
 
 EXPOSE 80
 
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]  
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
