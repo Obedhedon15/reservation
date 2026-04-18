@@ -57,7 +57,7 @@ RUN composer install \
 COPY package.json package-lock.json* ./
 
 # Install Node dependencies and build assets
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 COPY vite.config.js ./
 COPY resources/ ./resources/
 RUN npm run build
