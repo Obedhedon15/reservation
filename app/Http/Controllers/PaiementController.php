@@ -59,22 +59,28 @@ class PaiementController extends Controller
             'date'      => $request->date,
         ]);
 
-      // Préparer les données à envoyer à CinetPay
+  // Préparer les données à envoyer à CinetPay
 $dataToSend = [
-    // Utilisation de config() ou env() avec une sécurité
-    'apikey'           => config('services.cinetpay.api_key') ?? env('CINETPAY_API_KEY'),
-    'site_id'          => config('services.cinetpay.site_id') ?? env('CINETPAY_SITE_ID'),
-    'transaction_id'   => $reference,
-    'amount'           => (int) $salle->tarif,
-    'currency'         => 'CDF',
-    'description'      => 'Réservation de la salle : ' . ($salle->nom ?? 'Inconnue'),
-    'return_url'       => env('CINETPAY_RETURN_URL'),
-    'notify_url'       => env('CINETPAY_NOTIFY_URL'),
-    'customer_name'    => trim($request->name),
-    'customer_email'   => $request->email,
-    'customer_phone_number' => preg_replace('/\s+/', '', $request->phone),
-    'customer_country' => 'CD',
+    // On utilise config() en priorité, c'est la méthode recommandée par Laravel
+    'apikey'                => config('services.cinetpay.api_key'),
+    'site_id'               => config('services.cinetpay.site_id'),
+    'transaction_id'        => $reference,
+    'amount'                => (int) $salle->tarif,
+    'currency'              => 'CDF',
+    'description'           => 'Réservation de la salle : ' . ($salle->nom ?? 'Inconnue'),
+    'return_url'            => config('services.cinetpay.return_url') ?? env('CINETPAY_RETURN_URL'),
+    'notify_url'            => config('services.cinetpay.notify_url') ?? env('CINETPAY_NOTIFY_URL'),
+    'customer_name'         => trim($request->name),
+    'customer_email'        => $request->email,
+    // On s'assure que le téléphone n'a que des chiffres pour le Push USSD
+    'customer_phone_number' => preg_replace('/[^0-9]/', '', $request->phone),
+    'customer_country'      => 'CD',
 ];
+
+// TEST DE SÉCURITÉ : Si une clé est vide, on arrête tout avant l'erreur CinetPay
+if (empty($dataToSend['site_id']) || empty($dataToSend['apikey'])) {
+    return back()->with('error', "Problème de configuration : Les clés CinetPay sont introuvables sur le serveur.");
+}
 
     // Afficher les données pour debug et stopper ici
     //dd($dataToSend);
