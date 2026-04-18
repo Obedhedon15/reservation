@@ -49,12 +49,12 @@ RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs boots
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data /app
 
-# 10. Nettoyage TOTAL avant le démarrage
-RUN rm -rf bootstrap/cache/*.php && \
-    php artisan config:clear && \
-    php artisan route:clear && \
-    php artisan view:clear && \
-    php artisan cache:clear
+# 10. Nettoyage sécurisé (ne bloque pas si un dossier manque)
+RUN php artisan config:clear || true && \
+    php artisan route:clear || true && \
+    php artisan view:clear || true && \
+    php artisan cache:clear || true && \
+    rm -rf bootstrap/cache/*.php
 
 # 11. Configuration PHP-FPM (Port 9000)
 RUN sed -i 's|listen = /run/php/php8.2-fpm.sock|listen = 9000|' /usr/local/etc/php-fpm.d/www.conf || true
