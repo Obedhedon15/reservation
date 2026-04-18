@@ -86,15 +86,13 @@ RUN sed -i 's|listen = 127.0.0.1:9000|listen = /run/php/php8.2-fpm.sock|' /usr/l
     && sed -i 's|;listen.group = www-data|listen.group = www-data|' /usr/local/etc/php-fpm.d/www.conf \
     && mkdir -p /run/php
 
-# On vide COMPLÈTEMENT le dossier des sites activés pour éviter les conflits
-RUN rm -rf /etc/nginx/sites-enabled/*
+RUN rm -rf /etc/nginx/sites-enabled/* && \
+    echo "" > /etc/nginx/sites-available/default && \
+    ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
-# On copie ta config personnalisée
+# On installe ta configuration Bopeto
 COPY docker/nginx.conf /etc/nginx/sites-enabled/app.conf
-# -------------------------
-
-# Configuration Supervisor
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# ------------------------------------------
 
 EXPOSE 80
 
