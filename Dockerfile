@@ -16,16 +16,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Installation des extensions PHP
-RUN docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath \
-    gd \
-    zip \
-    opcache
+RUN docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd zip opcache
 
 # 3. Installation de Redis
 RUN pecl install redis && docker-php-ext-enable redis
@@ -59,26 +50,19 @@ RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs boots
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data /app
 
+# 10. Nettoyage Laravel
+RUN php artisan config:clear || true && php artisan route:clear || true && php artisan view:clear || true && php artisan event:clear || true
 
-# 10. Nettoyage Laravel (On ignore les erreurs si le cache est déjà vide)
-RUN php artisan config:clear || true && \
-    php artisan route:clear || true && \
-    php artisan view:clear || true && \
-    php artisan event:clear || true
+# 11. Configuration PHP-FPM (On s'assure qu'il écoute sur le port 9000)
+RUN sed -i 's|listen = /run/php/php8.2-fpm.sock|listen = 9000|' /usr/local/etc/php-fpm.d/www.conf || true
 
-# 11. Configuration PHP-FPM (Socket Unix)
-RUN sed -i 's|listen = 127.0.0.1:9000|listen = /run/php/php8.2-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf \
-    && sed -i 's|;listen.owner = www-data|listen.owner = www-data|' /usr/local/etc/php-fpm.d/www.conf \
-    && sed -i 's|;listen.group = www-data|listen.group = www-data|' /usr/local/etc/php-fpm.d/www.conf \
-    && mkdir -p /run/php
-
-# 12. Configuration NGINX (Correction doublon)
+# 12. Configuration NGINX
 RUN rm -rf /etc/nginx/sites-enabled/* && \
     echo "" > /etc/nginx/sites-available/default && \
     ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 COPY docker/nginx.conf /etc/nginx/sites-enabled/app.conf
 
-# 13. Configuration SUPERVISOR (La ligne qui manquait !)
+# 13. Configuration SUPERVISOR
 RUN mkdir -p /etc/supervisor/conf.d
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
