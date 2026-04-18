@@ -106,6 +106,9 @@ COPY docker/nginx.conf /etc/nginx/sites-enabled/app.conf
 # Supervisor configuration
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Force la génération de la clé et les migrations si nécessaire
+RUN php artisan key:generate --force
+
 EXPOSE 80
 
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]  
