@@ -50,10 +50,14 @@ RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs boots
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data /app
 
-# 10. Nettoyage Laravel
-RUN php artisan config:clear || true && php artisan route:clear || true && php artisan view:clear || true && php artisan event:clear || true
+# 10. Nettoyage Laravel (Modifié pour forcer la reconstruction du cache)
+RUN php artisan config:clear || true && \
+    php artisan route:clear || true && \
+    php artisan view:clear || true && \
+    php artisan event:clear || true && \
+    rm -f bootstrap/cache/config.php bootstrap/cache/services.php bootstrap/cache/packages.php
 
-# 11. Configuration PHP-FPM (On s'assure qu'il écoute sur le port 9000)
+# 11. Configuration PHP-FPM (Port 9000)
 RUN sed -i 's|listen = /run/php/php8.2-fpm.sock|listen = 9000|' /usr/local/etc/php-fpm.d/www.conf || true
 
 # 12. Configuration NGINX
