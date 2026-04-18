@@ -43,18 +43,16 @@ RUN npm install --ignore-scripts
 # 8. Copie du projet et Build
 COPY . .
 RUN npm run build
-RUN composer dump-autoload --optimize --no-scripts
 
-# 9. Permissions
+# 9. Permissions (Crucial pour Laravel)
 RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data /app
 
-# 10. Nettoyage Laravel (Modifié pour forcer la reconstruction du cache)
+# 10. Nettoyage Laravel et reset du cache de démarrage
 RUN php artisan config:clear || true && \
     php artisan route:clear || true && \
     php artisan view:clear || true && \
-    php artisan event:clear || true && \
     rm -f bootstrap/cache/config.php bootstrap/cache/services.php bootstrap/cache/packages.php
 
 # 11. Configuration PHP-FPM (Port 9000)
