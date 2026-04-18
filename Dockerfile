@@ -57,7 +57,7 @@ RUN composer install \
 COPY package.json package-lock.json* ./
 
 # Install Node dependencies and build assets
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 COPY vite.config.js ./
 COPY resources/ ./resources/
 RUN npm run build
@@ -79,11 +79,12 @@ RUN mkdir -p \
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
-# Clear any stale config (do NOT run config:cache — it fails without a real .env at build time)
+# Nettoyage complet : on ne met RIEN en cache pendant le build pour éviter les crashs
 RUN php artisan config:clear \
-    && php artisan route:cache \
-    && php artisan view:cache \
-    && php artisan event:cache
+    && php artisan route:clear \
+    && php artisan view:clear \
+    && php artisan event:clear
+
 
 # Configure PHP-FPM to listen on a Unix socket
 RUN sed -i 's|listen = 127.0.0.1:9000|listen = /run/php/php8.2-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf \
