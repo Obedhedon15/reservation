@@ -59,8 +59,12 @@ RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs boots
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data /app
 
-# 10. Nettoyage Laravel
-RUN php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan event:clear
+
+# 10. Nettoyage Laravel (On ignore les erreurs si le cache est déjà vide)
+RUN php artisan config:clear || true && \
+    php artisan route:clear || true && \
+    php artisan view:clear || true && \
+    php artisan event:clear || true
 
 # 11. Configuration PHP-FPM (Socket Unix)
 RUN sed -i 's|listen = 127.0.0.1:9000|listen = /run/php/php8.2-fpm.sock|' /usr/local/etc/php-fpm.d/www.conf \
